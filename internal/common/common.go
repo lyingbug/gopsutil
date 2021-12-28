@@ -332,6 +332,10 @@ func GetEnv(key string, dfault string, combineWith ...string) string {
 	}
 }
 
+func HostProcessProc(combineWith ...string) string {
+	return GetEnv("HOST_PROCESS_PROC", "/proc", combineWith...)
+}
+
 func HostProc(combineWith ...string) string {
 	return GetEnv("HOST_PROC", "/proc", combineWith...)
 }

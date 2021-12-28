@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package process
@@ -18,7 +19,6 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/internal/common"
 	"github.com/shirou/gopsutil/v3/net"
-	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 )
 
@@ -144,7 +144,7 @@ func (p *Process) StatusWithContext(ctx context.Context) ([]string, error) {
 func (p *Process) ForegroundWithContext(ctx context.Context) (bool, error) {
 	// see https://github.com/shirou/gopsutil/issues/596#issuecomment-432707831 for implementation details
 	pid := p.Pid
-	statPath := common.HostProc(strconv.Itoa(int(pid)), "stat")
+	statPath := common.HostProcessProc(strconv.Itoa(int(pid)), "stat")
 	contents, err := ioutil.ReadFile(statPath)
 	if err != nil {
 		return false, err
@@ -293,7 +293,7 @@ func (p *Process) NumThreadsWithContext(ctx context.Context) (int32, error) {
 
 func (p *Process) ThreadsWithContext(ctx context.Context) (map[int32]*cpu.TimesStat, error) {
 	ret := make(map[int32]*cpu.TimesStat)
-	taskPath := common.HostProc(strconv.Itoa(int(p.Pid)), "task")
+	taskPath := common.HostProcessProc(strconv.Itoa(int(p.Pid)), "task")
 
 	tids, err := readPidsFromDir(taskPath)
 	if err != nil {
@@ -394,7 +394,7 @@ func (p *Process) MemoryMapsWithContext(ctx context.Context, grouped bool) (*[]M
 	if grouped {
 		ret = make([]MemoryMapsStat, 1)
 	}
-	smapsPath := common.HostProc(strconv.Itoa(int(pid)), "smaps")
+	smapsPath := common.HostProcessProc(strconv.Itoa(int(pid)), "smaps")
 	contents, err := ioutil.ReadFile(smapsPath)
 	if err != nil {
 		return nil, err
@@ -486,7 +486,7 @@ func (p *Process) MemoryMapsWithContext(ctx context.Context, grouped bool) (*[]M
 }
 
 func (p *Process) EnvironWithContext(ctx context.Context) ([]string, error) {
-	environPath := common.HostProc(strconv.Itoa(int(p.Pid)), "environ")
+	environPath := common.HostProcessProc(strconv.Itoa(int(p.Pid)), "environ")
 
 	environContent, err := ioutil.ReadFile(environPath)
 	if err != nil {
@@ -515,7 +515,7 @@ func limitToUint(val string) (uint64, error) {
 // Get num_fds from /proc/(pid)/limits
 func (p *Process) fillFromLimitsWithContext(ctx context.Context) ([]RlimitStat, error) {
 	pid := p.Pid
-	limitsFile := common.HostProc(strconv.Itoa(int(pid)), "limits")
+	limitsFile := common.HostProcessProc(strconv.Itoa(int(pid)), "limits")
 	d, err := os.Open(limitsFile)
 	if err != nil {
 		return nil, err
@@ -608,7 +608,7 @@ func (p *Process) fillFromLimitsWithContext(ctx context.Context) ([]RlimitStat, 
 // Get list of /proc/(pid)/fd files
 func (p *Process) fillFromfdListWithContext(ctx context.Context) (string, []string, error) {
 	pid := p.Pid
-	statPath := common.HostProc(strconv.Itoa(int(pid)), "fd")
+	statPath := common.HostProcessProc(strconv.Itoa(int(pid)), "fd")
 	d, err := os.Open(statPath)
 	if err != nil {
 		return statPath, []string{}, err
@@ -650,7 +650,7 @@ func (p *Process) fillFromfdWithContext(ctx context.Context) (int32, []*OpenFile
 // Get cwd from /proc/(pid)/cwd
 func (p *Process) fillFromCwdWithContext(ctx context.Context) (string, error) {
 	pid := p.Pid
-	cwdPath := common.HostProc(strconv.Itoa(int(pid)), "cwd")
+	cwdPath := common.HostProcessProc(strconv.Itoa(int(pid)), "cwd")
 	cwd, err := os.Readlink(cwdPath)
 	if err != nil {
 		return "", err
@@ -661,7 +661,7 @@ func (p *Process) fillFromCwdWithContext(ctx context.Context) (string, error) {
 // Get exe from /proc/(pid)/exe
 func (p *Process) fillFromExeWithContext(ctx context.Context) (string, error) {
 	pid := p.Pid
-	exePath := common.HostProc(strconv.Itoa(int(pid)), "exe")
+	exePath := common.HostProcessProc(strconv.Itoa(int(pid)), "exe")
 	exe, err := os.Readlink(exePath)
 	if err != nil {
 		return "", err
@@ -672,7 +672,7 @@ func (p *Process) fillFromExeWithContext(ctx context.Context) (string, error) {
 // Get cmdline from /proc/(pid)/cmdline
 func (p *Process) fillFromCmdlineWithContext(ctx context.Context) (string, error) {
 	pid := p.Pid
-	cmdPath := common.HostProc(strconv.Itoa(int(pid)), "cmdline")
+	cmdPath := common.HostProcessProc(strconv.Itoa(int(pid)), "cmdline")
 	cmdline, err := ioutil.ReadFile(cmdPath)
 	if err != nil {
 		return "", err
@@ -686,7 +686,7 @@ func (p *Process) fillFromCmdlineWithContext(ctx context.Context) (string, error
 
 func (p *Process) fillSliceFromCmdlineWithContext(ctx context.Context) ([]string, error) {
 	pid := p.Pid
-	cmdPath := common.HostProc(strconv.Itoa(int(pid)), "cmdline")
+	cmdPath := common.HostProcessProc(strconv.Itoa(int(pid)), "cmdline")
 	cmdline, err := ioutil.ReadFile(cmdPath)
 	if err != nil {
 		return nil, err
@@ -709,7 +709,7 @@ func (p *Process) fillSliceFromCmdlineWithContext(ctx context.Context) ([]string
 // Get IO status from /proc/(pid)/io
 func (p *Process) fillFromIOWithContext(ctx context.Context) (*IOCountersStat, error) {
 	pid := p.Pid
-	ioPath := common.HostProc(strconv.Itoa(int(pid)), "io")
+	ioPath := common.HostProcessProc(strconv.Itoa(int(pid)), "io")
 	ioline, err := ioutil.ReadFile(ioPath)
 	if err != nil {
 		return nil, err
@@ -745,7 +745,7 @@ func (p *Process) fillFromIOWithContext(ctx context.Context) (*IOCountersStat, e
 // Get memory info from /proc/(pid)/statm
 func (p *Process) fillFromStatmWithContext(ctx context.Context) (*MemoryInfoStat, *MemoryInfoExStat, error) {
 	pid := p.Pid
-	memPath := common.HostProc(strconv.Itoa(int(pid)), "statm")
+	memPath := common.HostProcessProc(strconv.Itoa(int(pid)), "statm")
 	contents, err := ioutil.ReadFile(memPath)
 	if err != nil {
 		return nil, nil, err
@@ -806,7 +806,7 @@ func (p *Process) fillNameWithContext(ctx context.Context) error {
 // Get name from /proc/(pid)/comm
 func (p *Process) fillFromCommWithContext(ctx context.Context) error {
 	pid := p.Pid
-	statPath := common.HostProc(strconv.Itoa(int(pid)), "comm")
+	statPath := common.HostProcessProc(strconv.Itoa(int(pid)), "comm")
 	contents, err := ioutil.ReadFile(statPath)
 	if err != nil {
 		return err
@@ -819,7 +819,7 @@ func (p *Process) fillFromCommWithContext(ctx context.Context) error {
 // Get various status from /proc/(pid)/status
 func (p *Process) fillFromStatusWithContext(ctx context.Context) error {
 	pid := p.Pid
-	statPath := common.HostProc(strconv.Itoa(int(pid)), "status")
+	statPath := common.HostProcessProc(strconv.Itoa(int(pid)), "status")
 	contents, err := ioutil.ReadFile(statPath)
 	if err != nil {
 		return err
@@ -1020,9 +1020,9 @@ func (p *Process) fillFromTIDStatWithContext(ctx context.Context, tid int32) (ui
 	var statPath string
 
 	if tid == -1 {
-		statPath = common.HostProc(strconv.Itoa(int(pid)), "stat")
+		statPath = common.HostProcessProc(strconv.Itoa(int(pid)), "stat")
 	} else {
-		statPath = common.HostProc(strconv.Itoa(int(pid)), "task", strconv.Itoa(int(tid)), "stat")
+		statPath = common.HostProcessProc(strconv.Itoa(int(pid)), "task", strconv.Itoa(int(tid)), "stat")
 	}
 
 	contents, err := ioutil.ReadFile(statPath)
@@ -1126,7 +1126,7 @@ func (p *Process) fillFromStatWithContext(ctx context.Context) (uint64, int32, *
 }
 
 func pidsWithContext(ctx context.Context) ([]int32, error) {
-	return readPidsFromDir(common.HostProc())
+	return readPidsFromDir(common.HostProcessProc())
 }
 
 func ProcessesWithContext(ctx context.Context) ([]*Process, error) {
